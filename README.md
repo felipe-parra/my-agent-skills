@@ -29,6 +29,12 @@ behind.
 
 ## Quickstart
 
+The workflow is two steps: **install the base layer**, then **customize for
+this project**. The base layer is generic and safe to share across repos; the
+customization layer encodes what makes *this* repo special.
+
+### 1. Install the base layer
+
 From inside the target repo:
 
 ```bash
@@ -41,8 +47,8 @@ Then add this single line to the project's `CLAUDE.md`:
 @AGENTS.md
 ```
 
-That's it — Claude Code now loads every standard on every turn, and the skills
-are available under `.claude/skills/`.
+That's it for the base — Claude Code now loads every standard on every turn,
+and the skills are available under `.claude/skills/`.
 
 For reproducible setups (recommended in shared repos and CI), pin to a tag:
 
@@ -52,6 +58,37 @@ REF=v0.1.0 curl -fsSL \
   | bash -s -- .
 ```
 
+### 2. Customize for this project
+
+The shared standards know about TypeScript and React in general; they don't
+know about *your* stack, conventions, or guardrails. That's what the
+**`customize-claude`** skill is for.
+
+Open Claude Code in the project and say something like:
+
+> "Customize this for my project — we use Bun, Drizzle, and we always run
+> `bun typecheck` before push. Block edits to `drizzle/schema.ts` outside of
+> migration PRs."
+
+The `customize-claude` skill takes that fuzzy input and decides — for each
+piece — whether it should become a **skill** (intent-based, agent-invoked), a
+**slash command** (explicit, user-invoked), or a **hook** (deterministic,
+event-driven). Then it scaffolds the right files in the right scope (project
+vs user) and verifies they load.
+
+**Why this matters:** it's the difference between a generic install and an
+agent that actually understands your codebase. The base layer is the floor;
+the customization layer is what makes the install worth keeping.
+
+Re-run `customize-claude` any time the project picks up a new convention or
+recurring task. It's not a one-shot — it's the maintenance loop.
+
+### 3. (Optional) Pin and detect drift
+
+In shared repos, pin to a tag (`REF=v0.1.0`) and add a one-line CI job that
+re-runs the installer in a clean tree and fails on diff. See [Detecting drift
+in CI](#detecting-drift-in-ci) below.
+
 ---
 
 ## What's inside
@@ -60,6 +97,7 @@ REF=v0.1.0 curl -fsSL \
 my-agent-skills/
 ├── skills/                    # one folder per Claude Code skill
 │   ├── create-tests/
+│   ├── customize-claude/      # translate project knowledge → skill / command / hook
 │   ├── explain-module/
 │   ├── generate-release-notes/
 │   ├── investigate-build/

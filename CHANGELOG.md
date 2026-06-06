@@ -7,6 +7,16 @@ for tagged releases — pin `REF=vX.Y.Z` in the installer for reproducible setup
 
 ## [Unreleased]
 
+### Added
+- `customize-claude` skill — translates fuzzy project knowledge
+  (conventions, recurring procedures, guardrails) into the right Claude Code
+  primitive (skill, slash command, or hook) at the right scope (project vs user).
+  Includes a decision matrix so the choice between the three primitives is
+  explicit, not vibes-based.
+- README "Quickstart" rewritten as a two-step flow (base install →
+  customize-for-this-project) with a dedicated section explaining the
+  customization loop.
+
 ## [0.1.0] - 2026-06-06
 
 ### Added
