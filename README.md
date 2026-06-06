@@ -15,15 +15,37 @@ they can be reused, audited, and version-pinned.
 
 ## Why this exists
 
-Every project I work on needs the same agent behaviors: review a PR, refactor a
-component, plan an issue, write tests in the project's style, talk to users in
-Spanish without sounding like a bad translation. Copy-pasting `.claude/skills/`
-between repos gets stale within a week.
+Anyone using Claude Code seriously across more than one repo hits the same
+three walls:
 
-**This repo is a single source of truth.** Skills live here. Standards live
-here. Each consumer repo runs one command to sync — pinned to a tag for
+**1. Every new repo needs the same handful of skills.** Review a PR. Plan a
+ticket. Investigate a broken build. Refactor a bloated component. Draft a PR
+description from a branch. Generate release notes. You re-explain how you want
+each of these done on every new project — until you stop bothering, and the
+agent reverts to generic answers that read like they were written by a
+stranger.
+
+**2. CLAUDE.md drift.** You write a sharp standards block in one repo. Three
+months and four repos later, half the rules are different, half are forgotten,
+none are in sync. Copy-pasting `.claude/skills/` between repos rots within a
+week. You can't tell which project has the *current* version because nothing
+is versioned.
+
+**3. No source of truth for agent behavior.** When a project's setup goes from
+"great" to "weirdly inconsistent," there's no `git log` to diff against. Was
+it a CLAUDE.md edit? A skill change? A drifted copy? Nobody knows, and the
+agent's behavior becomes folklore.
+
+**This repo is the single source of truth.** Skills live here, standards live
+here. Each consumer repo runs one command to sync, pinned to a tag for
 reproducibility, with CI drift detection so projects can't silently fall
-behind.
+behind. New project? Same install, same baseline behavior. Update a standard?
+Every consumer can pull it in one PR.
+
+The other half of the problem — every project also has its own stack-specific
+conventions (your test runner, your branch naming, your release flow, the
+guardrail you keep meaning to add) — is what [`customize-claude`](#2-customize-for-this-project)
+handles. The base layer is shared; the customization layer is per-repo.
 
 ---
 
