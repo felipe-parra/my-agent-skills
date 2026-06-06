@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-install-script:
+    name: shellcheck install.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: shellcheck install.sh
+
+  validate-skills:
+    name: Validate SKILL.md frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every skill has the required frontmatter keys
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in skills/*/SKILL.md; do
+            if [[ ! -f "$f" ]]; then
+              echo "::error::No SKILL.md files found under skills/"
+              exit 1
+            fi
+
+            # Frontmatter must start the file.
+            if ! head -n 1 "$f" | grep -q '^---$'; then
+              echo "::error file=$f::Missing opening '---' frontmatter delimiter"
+              fail=1
+              continue
+            fi
+
+            # Extract frontmatter block.
+            frontmatter="$(awk '/^---$/{c++; next} c==1' "$f")"
+
+            for key in name description; do
+              if ! grep -q "^${key}:" <<< "$frontmatter"; then
+                echo "::error file=$f::Missing required frontmatter key '${key}'"
+                fail=1
+              fi
+            done
+
+            # name: must match the directory name.
+            dir="$(basename "$(dirname "$f")")"
+            name="$(grep '^name:' <<< "$frontmatter" | head -n1 | sed 's/^name:[[:space:]]*//')"
+            if [[ "$name" != "$dir" ]]; then
+              echo "::error file=$f::Frontmatter name '$name' does not match directory '$dir'"
+              fail=1
+            fi
+          done
+
+          if [[ $fail -ne 0 ]]; then
+            exit 1
+          fi
+          echo "All skills validated."
+
+  smoke-test-install:
+    name: Smoke-test install.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run installer against a temporary target
+        run: |
+          set -euo pipefail
+          mkdir /tmp/target
+          # Point STANDARDS_REPO at the local checkout so we don't need network.
+          STANDARDS_REPO="file://$PWD" REF="$(git rev-parse HEAD)" \
+            ./install.sh /tmp/target
+          test -f /tmp/target/AGENTS.md
+          test -d /tmp/target/.claude/skills
+          # AGENTS.md should start with the auto-generated marker.
+          head -n 1 /tmp/target/AGENTS.md | grep -q "AUTO-GENERATED from my-agent-skills"
+          # At least one skill should be installed.
+          test "$(find /tmp/target/.claude/skills -name SKILL.md | wc -l)" -gt 0
+          echo "Install smoke-test passed."

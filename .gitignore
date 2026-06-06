@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Local Claude Code state — never check this in
+.claude/settings.local.json
+.claude/.session/
+
+# Test scratch
+/tmp-test-target/
