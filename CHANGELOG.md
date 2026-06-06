@@ -7,12 +7,14 @@ for tagged releases — pin `REF=vX.Y.Z` in the installer for reproducible setup
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-06
+
 ### Added
 - Initial scaffolding: `skills/`, `standards/`, `install.sh`.
-- Eight skills migrated from local `.claude/skills/`:
+- Nine skills shipped:
   `create-tests`, `explain-module`, `generate-release-notes`,
   `investigate-build`, `publish-changes`, `refactor-component`,
-  `review-pr`, `summarize-branch`.
+  `review-pr`, `summarize-branch`, `tackle-issue`.
 - Three baseline standards: `00-base.md`, `01-typescript.md`, `02-spanish-ui.md`.
 - CI workflow that lints `install.sh` with shellcheck and validates that
   every `SKILL.md` has the required frontmatter keys.

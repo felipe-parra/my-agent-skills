@@ -22,7 +22,8 @@ my-agent-skills/
 │   ├── publish-changes/SKILL.md
 │   ├── refactor-component/SKILL.md
 │   ├── review-pr/SKILL.md
-│   └── summarize-branch/SKILL.md
+│   ├── summarize-branch/SKILL.md
+│   └── tackle-issue/SKILL.md
 ├── standards/                 # concatenated into AGENTS.md, in lex order
 │   ├── 00-base.md             # baseline: tone, scope, safety, comments
 │   ├── 01-typescript.md       # TS + React conventions
