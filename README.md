@@ -1,12 +1,56 @@
 # my-agent-skills
 
-A shareable set of Claude Code **skills** and **agent standards** that I
-(`@felipe-parra`) reuse across projects. One script installs the skills under
-`.claude/skills/` and concatenates the standards into an `AGENTS.md` that you
-import from `CLAUDE.md`.
+> A versioned, drift-detectable distribution of Claude Code **skills** and
+> **agent standards** — installable into any repo with a single command.
 
-> If you want your own version, click **"Use this template"** on GitHub to
-> spin up a clean copy with no commit history.
+[![CI](https://github.com/felipe-parra/my-agent-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/felipe-parra/my-agent-skills/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Use this template](https://img.shields.io/badge/GitHub-Use_this_template-2ea44f?logo=github)](https://github.com/felipe-parra/my-agent-skills/generate)
+
+Built by [@felipe-parra](https://github.com/felipe-parra). The skills and
+standards here are the same ones I use across my own projects — published so
+they can be reused, audited, and version-pinned.
+
+---
+
+## Why this exists
+
+Every project I work on needs the same agent behaviors: review a PR, refactor a
+component, plan an issue, write tests in the project's style, talk to users in
+Spanish without sounding like a bad translation. Copy-pasting `.claude/skills/`
+between repos gets stale within a week.
+
+**This repo is a single source of truth.** Skills live here. Standards live
+here. Each consumer repo runs one command to sync — pinned to a tag for
+reproducibility, with CI drift detection so projects can't silently fall
+behind.
+
+---
+
+## Quickstart
+
+From inside the target repo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/felipe-parra/my-agent-skills/main/install.sh | bash -s -- .
+```
+
+Then add this single line to the project's `CLAUDE.md`:
+
+```markdown
+@AGENTS.md
+```
+
+That's it — Claude Code now loads every standard on every turn, and the skills
+are available under `.claude/skills/`.
+
+For reproducible setups (recommended in shared repos and CI), pin to a tag:
+
+```bash
+REF=v0.1.0 curl -fsSL \
+  https://raw.githubusercontent.com/felipe-parra/my-agent-skills/v0.1.0/install.sh \
+  | bash -s -- .
+```
 
 ---
 
@@ -15,91 +59,96 @@ import from `CLAUDE.md`.
 ```
 my-agent-skills/
 ├── skills/                    # one folder per Claude Code skill
-│   ├── create-tests/SKILL.md
-│   ├── explain-module/SKILL.md
-│   ├── generate-release-notes/SKILL.md
-│   ├── investigate-build/SKILL.md
-│   ├── publish-changes/SKILL.md
-│   ├── refactor-component/SKILL.md
-│   ├── review-pr/SKILL.md
-│   ├── summarize-branch/SKILL.md
-│   └── tackle-issue/SKILL.md
+│   ├── create-tests/
+│   ├── explain-module/
+│   ├── generate-release-notes/
+│   ├── investigate-build/
+│   ├── publish-changes/
+│   ├── refactor-component/
+│   ├── review-pr/
+│   ├── summarize-branch/
+│   └── tackle-issue/
 ├── standards/                 # concatenated into AGENTS.md, in lex order
-│   ├── 00-base.md             # baseline: tone, scope, safety, comments
-│   ├── 01-typescript.md       # TS + React conventions
+│   ├── 00-base.md             # tone, scope discipline, safety, comments
+│   ├── 01-typescript.md       # TypeScript + React conventions
 │   └── 02-spanish-ui.md       # Spanish-language UI copy rules
-├── install.sh                 # the installer (see below)
-└── .github/workflows/ci.yml   # lint shell, validate skill frontmatter
+├── install.sh                 # the installer
+└── .github/workflows/ci.yml   # shellcheck + frontmatter + install smoke test
 ```
 
-The numeric prefix (`00-`, `01-`, `02-`) gives **deterministic precedence**
-when files are concatenated: later files layer on top of earlier ones.
+The numeric prefix on standards (`00-`, `01-`, `02-`) gives **deterministic
+precedence** when files are concatenated — later files layer on top of earlier
+ones, so order is a contract, not an accident of the filesystem.
 
 ---
 
-## Install into a project
+## How it works
 
-From inside the target repo:
+The installer does three things:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/felipe-parra/my-agent-skills/main/install.sh | bash -s -- .
-```
+1. **Fetch** the repo at `REF` — shallow `git clone` by default, falling back
+   to a GitHub tarball if `git` isn't installed.
+2. **Sync skills** into `.claude/skills/` in the target directory.
+3. **Concatenate standards** into a single `AGENTS.md` at the target root,
+   prefixed with an auto-generated header that records the exact commit SHA
+   that produced it.
 
-Or pin to a specific tag (recommended for CI / reproducible setups):
+Your project's `CLAUDE.md` imports `AGENTS.md` with `@AGENTS.md`, so the
+standards are loaded on every Claude Code turn — without the project owning a
+copy that can drift.
 
-```bash
-REF=v0.1.0 curl -fsSL \
-  https://raw.githubusercontent.com/felipe-parra/my-agent-skills/v0.1.0/install.sh \
-  | bash -s -- .
-```
+---
 
-The installer:
+## Design choices
 
-1. Fetches the repo at `REF` (shallow clone, or tarball if `git` is missing).
-2. Copies `skills/*` into `.claude/skills/` in the target directory.
-3. Concatenates `standards/*.md` into `AGENTS.md` at the target root, with a
-   header marking it as auto-generated.
+A few decisions worth calling out, because they're the difference between
+"works on my machine" and "safe to run unattended in 30 repos":
 
-Then, in your project's `CLAUDE.md`:
+| Choice | Why |
+|---|---|
+| **Lex-ordered standards** (`00-`, `01-`, `02-`) | Precedence is part of the API. Adding `03-mobile.md` later can't accidentally reorder existing rules. |
+| **Auto-generated header on `AGENTS.md`** | The installer refuses to overwrite an `AGENTS.md` that *doesn't* start with the header — so a hand-edited file is never silently clobbered. `FORCE=1` is the explicit opt-out. |
+| **`REF` env var pinning** | Consumers can pin to a tag (`v0.1.0`) or SHA. Same install command, reproducible result across machines and time. |
+| **Embed the resolved SHA in the output** | The header in `AGENTS.md` records the *resolved* commit SHA, not just the requested ref. `REF=main` today and `REF=main` next week leave different fingerprints — drift is visible. |
+| **git OR tarball fetch** | Works on minimal CI images that don't have `git` installed, without adding a dependency. |
+| **Drift detection in CI** | Re-run the installer in CI; non-empty `git diff` means the project has fallen behind upstream. One-line check. |
+| **CI validates skill frontmatter** | Every `SKILL.md` must have `name:` matching its folder name. Catches broken skills at PR time, not at user-frustration time. |
+| **No `npm install`, no runtime deps** | The installer is plain bash. Nothing to audit, nothing to version, nothing to lock. |
 
-```markdown
-# My Project
+---
 
-@AGENTS.md
-
-## Project-specific directives
-- (anything that only applies to this repo, layered on top)
-```
-
-The `@AGENTS.md` import is what makes Claude Code load the standards on every
-turn.
+## Reference
 
 ### Environment variables
 
-| Variable          | Default                                                | Purpose                                   |
-|-------------------|--------------------------------------------------------|-------------------------------------------|
-| `STANDARDS_REPO`  | `https://github.com/felipe-parra/my-agent-skills`      | Source repo URL                           |
-| `REF`             | `main`                                                 | Branch, tag, or commit SHA to install     |
+| Variable          | Default                                                | Purpose                                           |
+|-------------------|--------------------------------------------------------|---------------------------------------------------|
+| `STANDARDS_REPO`  | `https://github.com/felipe-parra/my-agent-skills`      | Source repo URL                                   |
+| `REF`             | `main`                                                 | Branch, tag, or commit SHA to install             |
 | `FORCE`           | `0`                                                    | Set to `1` to overwrite a hand-edited `AGENTS.md` |
 
----
-
-## Updating
+### Updating an existing project
 
 Re-run the same install command. The installer overwrites the auto-generated
 `AGENTS.md` and refreshes `.claude/skills/`. It refuses to overwrite an
 `AGENTS.md` that does *not* have the auto-generated header — set `FORCE=1` if
 you really mean to.
 
-To detect drift in CI (e.g. a project that wandered off-standard), run the
-installer in a clean working tree and check for a non-empty `git diff`.
+### Detecting drift in CI
 
----
+Run the installer in a clean working tree and check for a non-empty `git diff`:
 
-## Adding a new skill
+```bash
+- name: Verify agent skills are in sync with upstream
+  run: |
+    curl -fsSL https://raw.githubusercontent.com/felipe-parra/my-agent-skills/main/install.sh | bash -s -- .
+    git diff --exit-code .claude/skills AGENTS.md
+```
+
+### Adding a new skill
 
 1. Create `skills/<skill-name>/SKILL.md`.
-2. Use the standard Claude Code skill frontmatter:
+2. Use the standard Claude Code frontmatter:
 
    ```markdown
    ---
@@ -116,31 +165,32 @@ installer in a clean working tree and check for a non-empty `git diff`.
    ...body...
    ```
 
-3. Open a PR. CI validates that every `SKILL.md` has the required frontmatter
-   keys before merge.
+3. Open a PR. CI validates that:
+   - The `name:` frontmatter key matches the directory name.
+   - The `description:` key is present.
+   - The file has a valid frontmatter block.
 
----
-
-## Adding a new standard
+### Adding a new standard
 
 1. Pick the next numeric prefix (`03-…`, `04-…`).
-2. Write the doc with a top-level `# Title` heading and short, scannable
+2. Write the file with a top-level `# Title` heading and short, scannable
    sections.
 3. Open a PR.
 
-Standards should be **directives**, not exposition. Tell the agent what to do
+Standards should be **directives, not exposition.** Tell the agent what to do
 or not do, with a one-line *why* when the rationale isn't obvious.
 
 ---
 
-## Why a template repo + install script (not just one or the other)
+## Two ways to consume this
 
-- **Template repo** (GitHub "Use this template") is the right entry point for
-  someone starting their *own* skills collection — clean history, full control.
-- **Install script** is the right entry point for *consuming* this collection
-  from another project — pull updates, version-pin, detect drift in CI.
+**Use as a GitHub Template** — click ["Use this template"](https://github.com/felipe-parra/my-agent-skills/generate)
+to fork the *structure* without the history. Right for someone starting their
+own skills collection from scratch.
 
-Both modes are supported. Pick whichever fits your workflow.
+**Use as an installable bundle** — the `install.sh` flow above. Right for
+adding the skills + standards to an existing project, with version pinning and
+drift detection. This is the path most consumers want.
 
 ---
 
